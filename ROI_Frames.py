@@ -11,7 +11,7 @@ if not os.path.exists(output_folder):
 
 # Define the ROI (x, y, width, height) - adjust these values for your specific use case
 # Assuming Usain Bolt is running in the middle of the frame, adjust ROI accordingly.
-roi_x, roi_y, roi_w, roi_h = 110, 450, 500, 600  # Example values for ROI (middle of 720x1280 frame)
+roi_x, roi_y, roi_w, roi_h = 110, 450, 500, 600  # Example values for ROI 
 # Process each image in the 'Frames' folder
 def process_images(input_folder):
     # Loop through each file in the folder
