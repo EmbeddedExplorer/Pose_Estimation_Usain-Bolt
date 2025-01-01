@@ -10,7 +10,6 @@ logging.set_verbosity(logging.ERROR)
 
 # Initialize directories
 frames_directory = 'Edited_Frames'
-poses_directory = 'Poses'
 mechanics_directory = 'Mechanics'
 os.makedirs(mechanics_directory, exist_ok=True)
 
@@ -19,12 +18,12 @@ mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 pose = mp_pose.Pose(static_image_mode=True, model_complexity=1, min_detection_confidence=0.5)
 
-# Process each frame in the 'Poses' directory
-frame_files = [f for f in os.listdir(poses_directory) if f.endswith('.jpg')]
+# Process each frame in the 'Edited_Frames' directory
+frame_files = [f for f in os.listdir(frames_directory) if f.endswith('.jpg')]
 frame_files.sort()
 
 if not frame_files:
-    print("No frames found in the 'Poses' directory.")
+    print("No frames found in the 'Edited_Frames' directory.")
     exit()
 
 print(f"Processing {len(frame_files)} frames for biomechanics analysis...")
@@ -44,7 +43,7 @@ def calculate_angle(a, b, c):
 for frame_file in frame_files:
     try:
         print(f"Analyzing frame: {frame_file}")
-        frame_path = os.path.join(poses_directory, frame_file)
+        frame_path = os.path.join(frames_directory, frame_file)
         frame = cv2.imread(frame_path)
 
         if frame is None:
@@ -86,13 +85,13 @@ for frame_file in frame_files:
             # Calculate stride length (distance between left and right feet)
             stride_length = np.linalg.norm(np.array(foot_left) - np.array(foot_right))
 
-            # Annotate the frame
-            cv2.putText(frame, f"Left Knee Angle: {knee_angle_left:.2f}", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-            cv2.putText(frame, f"Right Knee Angle: {knee_angle_right:.2f}", (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-            cv2.putText(frame, f"Stride Length: {stride_length:.2f} px", (10, 90),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+            # Annotate the frame with white bold text
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            thickness = 2
+            color = (255, 255, 255)
+            cv2.putText(frame, f"Left Knee Angle: {knee_angle_left:.2f}", (10, 30), font, 0.6, color, thickness)
+            cv2.putText(frame, f"Right Knee Angle: {knee_angle_right:.2f}", (10, 60), font, 0.6, color, thickness)
+            cv2.putText(frame, f"Stride Length: {stride_length:.2f} px", (10, 90), font, 0.6, color, thickness)
 
             # Draw landmarks and connections
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
