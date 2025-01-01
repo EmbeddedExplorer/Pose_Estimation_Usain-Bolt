@@ -12,29 +12,14 @@ mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, min_detection_confidence=0.5)
 
-# Initialize attributes and deque for real-time graphing
+# Known height of Usain Bolt (in meters)
+usain_bolt_height_meters = 1.95  # Usain Bolt's height is 1.95 meters
+
+# Initialize real-time attributes
 timestamps = deque(maxlen=100)
 knee_angles_left = deque(maxlen=100)
 knee_angles_right = deque(maxlen=100)
 stride_lengths = deque(maxlen=100)
-
-# Initialize the figure for real-time graphing
-plt.style.use('seaborn-darkgrid')
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 8))
-fig.suptitle("Real-Time Biomechanics Analysis", fontsize=16)
-lines = {
-    "knee_left": ax1.plot([], [], label="Left Knee Angle", color="blue")[0],
-    "knee_right": ax2.plot([], [], label="Right Knee Angle", color="green")[0],
-    "stride": ax3.plot([], [], label="Stride Length", color="red")[0],
-}
-
-# Graph axes setup
-for ax, title in zip([ax1, ax2, ax3], ["Knee Angle (Left)", "Knee Angle (Right)", "Stride Length (px)"]):
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 180 if "Angle" in title else 300)
-    ax.set_ylabel(title)
-    ax.legend(loc="upper right")
-ax3.set_xlabel("Time (s)")
 
 # Function to calculate angles
 def calculate_angle(a, b, c):
@@ -43,22 +28,11 @@ def calculate_angle(a, b, c):
     angle = np.abs(np.degrees(radians))
     return angle if angle <= 180 else 360 - angle
 
-# Function to update the real-time graph
-def update_graph(frame_time):
-    x_vals = np.array(timestamps) - timestamps[0]
-    for attr, data, line in zip(["knee_left", "knee_right", "stride"], 
-                                [knee_angles_left, knee_angles_right, stride_lengths], 
-                                lines.values()):
-        line.set_data(x_vals, data)
-    for ax in [ax1, ax2, ax3]:
-        ax.set_xlim(0, max(10, x_vals[-1] if x_vals.any() else 0))
-    return lines.values()
-
-# Video processing and data recording
-def process_video(video_path):
+# Process video and save scaled data
+def process_video_with_scaling(video_path, output_csv):
     cap = cv2.VideoCapture(video_path)
-    start_time = time.time()
     biomechanics_data = []
+    scaling_factor = None
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -67,13 +41,24 @@ def process_video(video_path):
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = pose.process(frame_rgb)
-        current_time = time.time() - start_time
 
         if results.pose_landmarks:
             landmarks = results.pose_landmarks.landmark
             h, w, _ = frame.shape
 
-            # Extract landmarks
+            # Extract landmarks for height calculation
+            head_top = (int(landmarks[mp_pose.PoseLandmark.NOSE].x * w),
+                        int(landmarks[mp_pose.PoseLandmark.NOSE].y * h))
+            feet_bottom = (int(landmarks[mp_pose.PoseLandmark.LEFT_ANKLE].x * w),
+                           int(landmarks[mp_pose.PoseLandmark.LEFT_ANKLE].y * h))
+
+            # Calculate Usain Bolt's height in pixels
+            height_in_pixels = np.linalg.norm(np.array(head_top) - np.array(feet_bottom))
+            if not scaling_factor and height_in_pixels > 0:  # Calculate scaling factor once
+                scaling_factor = usain_bolt_height_meters / height_in_pixels
+                print(f"Calculated Scaling Factor: {scaling_factor:.6f} meters per pixel")
+
+            # Extract other body points for calculations
             hip_left = (int(landmarks[mp_pose.PoseLandmark.LEFT_HIP].x * w),
                         int(landmarks[mp_pose.PoseLandmark.LEFT_HIP].y * h))
             knee_left = (int(landmarks[mp_pose.PoseLandmark.LEFT_KNEE].x * w),
@@ -91,30 +76,26 @@ def process_video(video_path):
             foot_right = (int(landmarks[mp_pose.PoseLandmark.RIGHT_HEEL].x * w),
                           int(landmarks[mp_pose.PoseLandmark.RIGHT_HEEL].y * h))
 
-            # Calculate metrics
+            # Calculate biomechanics metrics
             knee_angle_left = calculate_angle(hip_left, knee_left, ankle_left)
             knee_angle_right = calculate_angle(hip_right, knee_right, ankle_right)
-            stride_length = np.linalg.norm(np.array(foot_left) - np.array(foot_right))
-
-            # Update graphs
-            timestamps.append(current_time)
-            knee_angles_left.append(knee_angle_left)
-            knee_angles_right.append(knee_angle_right)
-            stride_lengths.append(stride_length)
+            stride_length_pixels = np.linalg.norm(np.array(foot_left) - np.array(foot_right))
+            stride_length_meters = stride_length_pixels * scaling_factor if scaling_factor else 0
 
             # Record data
-            biomechanics_data.append([current_time, knee_angle_left, knee_angle_right, stride_length])
+            current_time = time.time()
+            biomechanics_data.append([current_time, knee_angle_left, knee_angle_right, stride_length_meters])
 
-            # Annotate frame
+            # Annotate the frame
             font, color, thickness = cv2.FONT_HERSHEY_SIMPLEX, (255, 255, 255), 2
             cv2.putText(frame, f"Left Knee Angle: {knee_angle_left:.1f}", (10, 30), font, 0.7, color, thickness)
             cv2.putText(frame, f"Right Knee Angle: {knee_angle_right:.1f}", (10, 60), font, 0.7, color, thickness)
-            cv2.putText(frame, f"Stride Length: {stride_length:.1f} px", (10, 90), font, 0.7, color, thickness)
+            cv2.putText(frame, f"Stride Length: {stride_length_meters:.2f} m", (10, 90), font, 0.7, color, thickness)
 
             # Draw pose landmarks
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-        # Display frame
+        # Display the video
         cv2.namedWindow('Real-Time Biomechanics', cv2.WINDOW_NORMAL)
         cv2.imshow('Real-Time Biomechanics', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -123,14 +104,41 @@ def process_video(video_path):
     cap.release()
     cv2.destroyAllWindows()
 
-    # Save data to CSV
-    df = pd.DataFrame(biomechanics_data, columns=['Timestamp', 'Left Knee Angle', 'Right Knee Angle', 'Stride Length'])
-    df.to_csv('biomechanics_data.csv', index=False)
-    print("Biomechanics data saved to 'biomechanics_data.csv'.")
+    # Save biomechanics data to CSV
+    df = pd.DataFrame(biomechanics_data, columns=['Timestamp', 'Left Knee Angle', 'Right Knee Angle', 'Stride Length (m)'])
+    df.to_csv(output_csv, index=False)
+    print(f"Biomechanics data saved to '{output_csv}'.")
 
-# Run the video processing
+def plot_scaled_data(csv_file):
+    df = pd.read_csv(csv_file)
+
+    plt.figure(figsize=(12, 8))
+
+    # Plot Knee Angles
+    plt.subplot(3, 1, 1)
+    plt.plot(df['Timestamp'], df['Left Knee Angle'], label='Left Knee Angle', color='blue')
+    plt.plot(df['Timestamp'], df['Right Knee Angle'], label='Right Knee Angle', color='green')
+    plt.ylabel('Knee Angle (degrees)')
+    plt.legend()
+    plt.title('Knee Angles Over Time')
+
+    # Plot Stride Length
+    plt.subplot(3, 1, 2)
+    plt.plot(df['Timestamp'], df['Stride Length (m)'], label='Stride Length', color='red')
+    plt.ylabel('Stride Length (meters)')
+    plt.legend()
+    plt.title('Stride Length Over Time')
+
+    # Add a common X label
+    plt.xlabel('Time (s)')
+    plt.tight_layout()
+    plt.show()
+
+
+# Process the video
 video_path = "Video.mp4"  # Replace with your video file path
-animation = FuncAnimation(fig, update_graph, interval=100)
-plt.ion()  # Enable interactive mode
-plt.show(block=False)  # Display the graphs while processing video
-process_video(video_path)
+output_csv = "mechanics_in_scale.csv"
+process_video_with_scaling(video_path, output_csv)
+
+# Plot the scaled data
+plot_scaled_data(output_csv)
