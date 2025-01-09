@@ -28,7 +28,7 @@ ax2.legend(loc="upper right")
 
 # Plot Stride Length
 ax3.plot(timestamps, stride_lengths, label="Stride Length", color="red")
-ax3.set_ylabel("Stride Length (px)")
+ax3.set_ylabel("Stride Length (m)")
 ax3.set_xlabel("Time (s)")
 ax3.legend(loc="upper right")
 
