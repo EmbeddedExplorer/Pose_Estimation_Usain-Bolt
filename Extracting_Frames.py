@@ -8,8 +8,8 @@ frames_directory = 'Frames'
 if not os.path.exists(frames_directory):
     os.makedirs(frames_directory)
 
-# Desired time interval (in seconds)
-desired_time_interval = 0.5  # e.g., every 0.5 seconds
+# Desired time interval 
+desired_time_interval = 0.5  #every 0.5 seconds
 
 # Open the video file
 cap = cv2.VideoCapture('Video.mp4')

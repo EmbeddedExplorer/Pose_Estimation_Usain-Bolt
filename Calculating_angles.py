@@ -30,9 +30,9 @@ print(f"Processing {len(frame_files)} frames for biomechanics analysis...")
 
 # Function to calculate angles between three points
 def calculate_angle(a, b, c):
-    a = np.array(a)  # First point
-    b = np.array(b)  # Middle point (joint)
-    c = np.array(c)  # Last point
+    a = np.array(a)  # First 
+    b = np.array(b)  # Middle (joint)
+    c = np.array(c)  # Last 
     radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
     angle = np.abs(np.degrees(radians))
     if angle > 180.0:

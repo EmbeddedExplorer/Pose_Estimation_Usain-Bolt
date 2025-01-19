@@ -12,7 +12,7 @@ mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, min_detection_confidence=0.5)
 
-# Known height of Usain Bolt (in meters)
+# height of Usain Bolt (in meters)
 usain_bolt_height_meters = 1.95  # Usain Bolt's height is 1.95 meters
 
 # Initialize real-time attributes

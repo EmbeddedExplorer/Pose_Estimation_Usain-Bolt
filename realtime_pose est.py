@@ -110,7 +110,7 @@ def process_video(video_path):
             cv2.putText(frame, f"Left Knee Angle: {knee_angle_left:.1f}", (10, 30), font, 0.7, color, thickness)
             cv2.putText(frame, f"Right Knee Angle: {knee_angle_right:.1f}", (10, 60), font, 0.7, color, thickness)
             cv2.putText(frame, f"Stride Length: {stride_length:.1f} px", (10, 90), font, 0.7, color, thickness)
-
+            
             # Draw pose landmarks
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
